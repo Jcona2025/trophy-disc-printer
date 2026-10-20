@@ -570,20 +570,9 @@ input[type=color] { width: 40px; height: 30px; border: 1px solid var(--line); bo
   }
   async function offer(doc, filename) {
     const blob = doc.output("blob");
-    if (!window.claude) {
-      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename;
-      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-      status("Downloaded " + filename + ". Print it at Actual size / 100%.", "ok"); return;
-    }
-    let dl = null;
-    try { dl = await window.claude.use("downloads"); } catch (e) { dl = null; }
-    if (!dl) { status("Saving isn't available in this view. Open the page in the Claude app or claude.ai to save the PDF.", "err"); return; }
-    try { await dl.save({ filename, data: blob }); status("Saved " + filename + ". Print it at Actual size / 100%.", "ok"); }
-    catch (e) {
-      if (e && e.code === "declined") status("Save cancelled.", "");
-      else if (e && e.code === "rate_limited") status("A save prompt is already open. Finish that one first.", "err");
-      else status("Couldn't save the file here (" + ((e && e.code) || "unknown") + ").", "err");
-    }
+    const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    status("Downloaded " + filename + ". Print it at Actual size / 100%.", "ok");
   }
   $("savePdf").addEventListener("click", async () => {
     if (!window.jspdf) { status("The PDF engine didn't load. Check your connection and reload.", "err"); return; }

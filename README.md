@@ -21,19 +21,20 @@ Everything runs in the browser. There is no server or database: logos never leav
 3. **Save test sheet**, print it on plain paper at **Actual size / 100%**, and check it against a sticker sheet held up to a window.
 4. Enter any offset in **Printer nudge**, then **Save stickers PDF** and print on the sticker sheet.
 
-## Hosting on GitHub Pages
+## Hosting
 
-1. Push these files to a GitHub repository.
-2. In the repo, go to **Settings → Pages**, set **Source** to *Deploy from a branch*, branch `main`, folder `/ (root)`.
-3. The app goes live at `https://<username>.github.io/<repo-name>/`.
+Live at **https://discs.baselinetech.ie**, served as static files from the Baseline Tech VPS
+(`/var/www/trophy-disc-printer`, nginx config in `nginx-discs.conf`, certificate from certbot).
+The code is on GitHub at `Jcona2025/trophy-disc-printer` as the backup and history; GitHub Pages
+is not used.
 
-To install it, open that link and choose **Add to Home screen** (phone) or the install icon in the address bar (Chrome/Edge on a PC).
+To install it, open the link and choose **Add to Home screen** (phone) or the install icon in the
+address bar (Chrome/Edge on a PC).
 
 ## Updating
 
-Edit the files and push to `main`; GitHub Pages redeploys in about a minute.
-
-Whenever you change anything, also bump `VERSION` in `sw.js` (e.g. `v1` → `v2`). Installed copies check for updates when opened and reload to the new version.
+Edit the files, bump `VERSION` in `sw.js` (e.g. `v2` → `v3`) so installed copies pick up the change,
+commit, then run `./deploy.sh`. Installed copies check for updates when opened and reload.
 
 ## Files
 

@@ -1,5 +1,5 @@
 // Bump this version whenever you change any file, so installed apps pick up the update.
-const VERSION = "v1";
+const VERSION = "v2";
 const CACHE = "disc-printer-" + VERSION;
 const APP_FILES = [
   "./",
