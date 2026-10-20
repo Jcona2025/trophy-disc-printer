@@ -1,0 +1,622 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trophy Disc Printer</title>
+<meta name="description" content="Put logos on round trophy sticker sheets and print them lined up.">
+<meta name="theme-color" content="#1f5a3a">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px) }
+body { margin: 0 }
+img { max-width: 100% }
+</style>
+<style>
+/* Layout: workbench — controls column on the left, the A4 sheet on the right as the hero; stacks on phones */
+:root {
+  --bg: #f3f4f1;
+  --panel: #ffffff;
+  --fg: #1d2420;
+  --muted: #5f6a63;
+  --line: #d9ddd6;
+  --brass: #9a6b1c;
+  --brass-soft: #f3e6cc;
+  --paper: #ffffff;
+  --disc: #e7ebe5;
+  --sel: #9a6b1c;
+  --ok: #2f7a4a;
+  --warn: #a4441f;
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #151916; --panel: #1d221f; --fg: #e8ece7; --muted: #9aa59d; --line: #313832;
+  --brass: #d9a54a; --brass-soft: #3a2f1a; --paper: #f7f7f4; --disc: #e2e6df; --sel: #c48f2f;
+  --ok: #6cc28d; --warn: #e8875f; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #151916; --panel: #1d221f; --fg: #e8ece7; --muted: #9aa59d; --line: #313832;
+  --brass: #d9a54a; --brass-soft: #3a2f1a; --paper: #f7f7f4; --disc: #e2e6df; --sel: #c48f2f;
+  --ok: #6cc28d; --warn: #e8875f; color-scheme: dark }
+
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+body { background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.45;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 20px 40px }
+.wrap { max-width: 1120px; margin: 0 auto; display: grid; gap: 20px }
+header { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 20px }
+h1 { font-family: var(--f-display); font-weight: 800; font-size: clamp(24px, 4vw, 32px); letter-spacing: -0.02em; margin: 0; text-wrap: balance }
+header p { margin: 0; color: var(--muted); max-width: 52ch }
+.main { display: grid; grid-template-columns: minmax(0, 380px) minmax(0, 1fr); gap: 20px; align-items: start }
+@media (max-width: 820px) { .main { grid-template-columns: minmax(0, 1fr) } }
+.controls { display: grid; gap: 14px; min-width: 0 }
+section.step { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 16px; display: grid; gap: 12px }
+.step h2 { margin: 0; font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); display: flex; gap: 8px; align-items: center }
+.step h2 b { font-family: var(--f-mono); color: var(--brass); font-weight: 500 }
+label { display: grid; gap: 4px; font-size: 13px; color: var(--muted); min-width: 0 }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px }
+.grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px }
+input[type=number], select { width: 100%; font: 500 15px var(--f-mono); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 9px; font-variant-numeric: tabular-nums }
+select { font-family: var(--f-body) }
+input:focus-visible, select:focus-visible, button:focus-visible, .file:focus-within { outline: 2px solid var(--brass); outline-offset: 2px }
+details summary { cursor: pointer; font-size: 13px; color: var(--brass); font-weight: 500 }
+details[open] summary { margin-bottom: 10px }
+.hint { font-size: 13px; color: var(--muted); margin: 0 }
+.hint strong { color: var(--fg) }
+button { font: 600 14px var(--f-body); border-radius: 7px; padding: 10px 14px; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--fg) }
+button:hover { border-color: var(--brass) }
+button.primary { background: var(--brass); border-color: var(--brass); color: #fff }
+button.primary:hover { filter: brightness(1.08) }
+.row { display: flex; flex-wrap: wrap; gap: 8px; align-items: center }
+.file { display: flex; align-items: center; gap: 12px }
+.pane { display: grid; gap: 12px }
+.lib { display: flex; flex-wrap: wrap; gap: 10px }
+.lib button.lg { padding: 4px; border-radius: 50%; width: 58px; height: 58px; display: grid; place-items: center; position: relative }
+.lib button.lg img { width: 48px; height: 48px; border-radius: 50%; display: block; background: var(--disc) }
+.lib button.lg[aria-pressed="true"] { border: 2px solid var(--brass); box-shadow: 0 0 0 3px var(--brass-soft) }
+.lib button.lg .n { position: absolute; right: -4px; bottom: -4px; font: 600 11px var(--f-mono); background: var(--fg); color: var(--panel); border-radius: 999px; padding: 1px 6px; font-variant-numeric: tabular-nums }
+.lib button.add { width: 58px; height: 58px; border-radius: 50%; border-style: dashed; font-size: 22px; line-height: 1; color: var(--brass); padding: 0 }
+.editor { display: grid; gap: 12px; border-top: 1px solid var(--line); padding-top: 12px }
+
+.tabs { display: grid; grid-template-columns: 1fr 1fr; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 3px; gap: 3px }
+.tabs button { border: 0; background: transparent; padding: 8px; color: var(--muted) }
+.tabs button[aria-selected="true"] { background: var(--panel); color: var(--fg); box-shadow: 0 1px 2px rgba(0,0,0,.12) }
+.upbtn { display: block; text-align: center; font: 600 14px var(--f-body); color: #fff; background: var(--brass); border-radius: 7px; padding: 12px; cursor: pointer }
+.upbtn { width: 100%; border: 0 }
+.upbtn:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px }
+.vh { position: absolute; opacity: 0; width: 1px; height: 1px; overflow: hidden; pointer-events: none }
+input[type=text] { width: 100%; font: 500 15px var(--f-body); color: var(--fg); background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 8px 9px }
+input[type=text]:focus-visible { outline: 2px solid var(--brass); outline-offset: 2px }
+.file img { width: 56px; height: 56px; border-radius: 50%; background: var(--disc); object-fit: cover; flex: none }
+.file span { font-size: 13px; color: var(--muted); min-width: 0; overflow-wrap: anywhere }
+.file span b { color: var(--fg); display: block; font-weight: 600 }
+input[type=range] { width: 100%; accent-color: var(--brass) }
+.toggle { display: flex; gap: 8px; align-items: center; font-size: 14px; color: var(--fg) }
+.toggle input { accent-color: var(--brass); width: 18px; height: 18px }
+input[type=color] { width: 40px; height: 30px; border: 1px solid var(--line); border-radius: 6px; padding: 2px; background: var(--bg) }
+
+.sheet-col { display: grid; gap: 12px; min-width: 0; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px) }
+@media (max-width: 820px) { .sheet-col { position: static } }
+.sheet-bar { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: center }
+.badge { font: 500 13px var(--f-mono); background: var(--brass-soft); color: var(--fg); padding: 4px 9px; border-radius: 999px }
+.paper { background: var(--paper); border-radius: 3px; box-shadow: 0 1px 2px rgba(0,0,0,.12), 0 8px 24px rgba(0,0,0,.10); width: 100%; max-width: 520px; margin: 0 auto }
+.paper svg { display: block; width: 100%; height: auto; touch-action: manipulation }
+.paper svg .pos { cursor: pointer }
+.actions { display: grid; gap: 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px }
+.actions .row button { flex: 1 1 180px }
+.status { font-size: 13px; min-height: 1.2em; margin: 0 }
+.status.ok { color: var(--ok) } .status.err { color: var(--warn) }
+.rule { font-size: 13px; background: var(--brass-soft); border-radius: 8px; padding: 10px 12px; margin: 0 }
+.mono { font-family: var(--f-mono) }
+@media (prefers-reduced-motion: no-preference) { button { transition: filter .15s, border-color .15s } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Trophy Disc Printer</h1>
+    <p>Put a logo on round sticker sheets and get a PDF that lines up. Print it at 100% and it lands on the stickers.</p>
+  </header>
+
+  <div class="main">
+    <div class="controls">
+      <section class="step">
+        <h2><b>1</b> Sticker sheet</h2>
+        <label>Sheet layout
+          <select id="preset"></select>
+        </label>
+        <p class="hint" id="presetNote"></p>
+        <details id="measure">
+          <summary>Edit measurements (mm)</summary>
+          <div class="grid3">
+            <label>Circle Ø <input type="number" id="dia" step="0.5" min="5"></label>
+            <label>Columns <input type="number" id="cols" step="1" min="1"></label>
+            <label>Rows <input type="number" id="rows" step="1" min="1"></label>
+            <label>Across pitch <input type="number" id="px" step="0.1" min="1"></label>
+            <label>Down pitch <input type="number" id="py" step="0.1" min="1"></label>
+            <label>&nbsp;<button type="button" id="centre" title="Centre the grid on the page">Centre</button></label>
+            <label>Left margin <input type="number" id="ml" step="0.1"></label>
+            <label>Top margin <input type="number" id="mt" step="0.1"></label>
+          </div>
+          <p class="hint" style="margin-top:8px">Pitch is the distance from one circle's centre to the next. Margin is from the paper edge to the first circle's edge.</p>
+        </details>
+      </section>
+
+      <section class="step">
+        <h2><b>2</b> Logos</h2>
+        <div class="lib" id="lib" aria-label="Logos for this sheet"></div>
+        <p class="hint">Pick a logo here, then tap circles on the sheet to place it. Tap a circle again to empty it.</p>
+        <div class="editor">
+          <div class="row" style="justify-content:space-between">
+            <label style="flex:1 1 160px">Logo name <input type="text" id="lgName" maxlength="30"></label>
+            <button type="button" id="lgDel" style="align-self:end">Delete logo</button>
+          </div>
+          <div class="tabs" role="tablist">
+            <button type="button" role="tab" id="tabUp" aria-selected="true">Upload logo</button>
+            <button type="button" role="tab" id="tabMake" aria-selected="false">Create logo</button>
+          </div>
+          <div id="paneUp" class="pane">
+            <p class="hint" id="upNote">PNG or JPG. A logo on a white or clear background works best.</p>
+            <input type="file" id="logo" accept="image/*" class="vh" tabindex="-1" aria-hidden="true">
+            <button type="button" class="upbtn" id="pickBtn">Choose from gallery, camera or files</button>
+            <p class="status" id="upStatus" role="status"></p>
+          </div>
+          <div id="paneMake" class="pane" hidden>
+            <label>Text around the top <input type="text" id="mkTop" maxlength="40"></label>
+            <label>Text around the bottom <input type="text" id="mkBot" maxlength="40"></label>
+            <div class="grid2">
+              <label>Centre text <input type="text" id="mkMid" maxlength="12"></label>
+              <label>Symbol
+                <select id="mkIcon">
+                  <option value="flag">Golf flag</option>
+                  <option value="trophy">Trophy</option>
+                  <option value="star">Star</option>
+                  <option value="none">None</option>
+                </select>
+              </label>
+            </div>
+            <div class="row">
+              <label class="toggle"><input type="color" id="mkBg" aria-label="Disc colour"> Disc</label>
+              <label class="toggle"><input type="color" id="mkFg" aria-label="Text colour"> Text</label>
+              <label class="toggle"><input type="color" id="mkAc" aria-label="Symbol colour"> Symbol</label>
+              <label class="toggle"><input type="checkbox" id="mkRing"> Border ring</label>
+            </div>
+          </div>
+          <label><span>Logo size: <span class="mono" id="fillOut"></span> of the circle</span>
+            <input type="range" id="fill" min="40" max="110" step="1">
+          </label>
+          <div class="row">
+            <label class="toggle"><input type="checkbox" id="bgOn"> Fill disc with colour</label>
+            <input type="color" id="bgCol" aria-label="Disc colour">
+          </div>
+        </div>
+      </section>
+
+      <section class="step">
+        <h2><b>3</b> Printer nudge</h2>
+        <p class="hint">Do this once per printer. Print the test sheet on <strong>plain paper</strong>, hold it over a sticker sheet up to a window, and see how far the crosshairs miss the circle centres.</p>
+        <div class="grid2">
+          <label>Move right (mm) <input type="number" id="ox" step="0.25"></label>
+          <label>Move down (mm) <input type="number" id="oy" step="0.25"></label>
+        </div>
+        <p class="hint">Print landed 2mm too low? Enter <span class="mono">-2</span> in Move down. Too far right? Use a negative Move right.</p>
+      </section>
+    </div>
+
+    <div class="sheet-col">
+      <div class="sheet-bar">
+        <span class="badge" id="count"></span>
+        <div class="row">
+          <button type="button" id="fillEmpty">Fill empty</button>
+          <button type="button" id="all">Fill all</button>
+          <button type="button" id="none">Clear</button>
+        </div>
+      </div>
+      <p class="hint" style="text-align:center">Tap a circle to place the selected logo. Leave used stickers empty.</p>
+      <div class="paper"><svg id="svg" viewBox="0 0 210 297" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A4 sticker sheet preview"></svg></div>
+      <div class="actions">
+        <p class="rule">In the print dialog choose <strong>Actual size</strong> or <strong>Scale 100%</strong>, paper <strong>A4</strong>. Never "Fit to page".</p>
+        <div class="row">
+          <button type="button" class="primary" id="savePdf">Save stickers PDF</button>
+          <button type="button" id="saveTest">Save test sheet</button>
+        </div>
+        <p class="status" id="status"></p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="jspdf.umd.min.js"></script>
+<script>
+(function () {
+  const A4W = 210, A4H = 297, PXMM = 24;
+  // Starting points only. Brands differ, so measure your own sheet.
+  const PRESETS = [
+    { id: "r25", name: "25 mm circles · 70 per sheet (7 × 10)", dia: 25, cols: 7, rows: 10, px: 27, py: 27 },
+    { id: "r38", name: "38 mm circles · 35 per sheet (5 × 7)", dia: 38, cols: 5, rows: 7, px: 40, py: 40 },
+    { id: "r44", name: "44 mm circles · 24 per sheet (4 × 6)", dia: 44, cols: 4, rows: 6, px: 46, py: 46 },
+    { id: "r50", name: "50 mm circles · 20 per sheet (4 × 5)", dia: 50, cols: 4, rows: 5, px: 51, py: 55 },
+    { id: "r51", name: "51 mm circles · 15 per sheet (3 × 5)", dia: 51, cols: 3, rows: 5, px: 65, py: 56 },
+    { id: "custom", name: "Custom (my own measurements)" }
+  ];
+  function centred(p) {
+    return { ml: +((A4W - ((p.cols - 1) * p.px + p.dia)) / 2).toFixed(2), mt: +((A4H - ((p.rows - 1) * p.py + p.dia)) / 2).toFixed(2) };
+  }
+  const $ = id => document.getElementById(id);
+  const load = k => { try { return JSON.parse(localStorage.getItem(k) || "null") } catch (e) { return null } };
+  const keep = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)) } catch (e) {} };
+
+  // ---------- state ----------
+  const p0 = PRESETS[0];
+  const saved = load("discprinter") || {};
+  delete saved.sel;
+  let S = Object.assign({ preset: "r25", dia: p0.dia, cols: p0.cols, rows: p0.rows, px: p0.px, py: p0.py,
+    ox: 0, oy: 0, assign: null, active: "" }, centred(p0), saved);
+
+  const defMk = () => ({ top: "Example Golf Club", bot: "Captain's Prize", mid: "2026", icon: "flag",
+    bg: "#1f5a3a", fg: "#f2e6c4", ac: "#d8a63b", ring: true });
+  let uid = 0; const newId = () => "L" + Date.now().toString(36) + (uid++);
+  function newLogo(kind, name) {
+    return { id: newId(), name, kind, data: "", mk: defMk(), fill: kind === "make" ? 100 : 85, bgOn: false, bgCol: "#ffffff" };
+  }
+  let LIB = (load("discprinter-logos") || []).filter(l => l && l.id);
+  if (!LIB.length) {
+    const a = newLogo("make", "Example crest");
+    const b = newLogo("make", "Example star"); Object.assign(b.mk, { top: "Club Champion", bot: "", mid: "2026", icon: "star", bg: "#14365c", fg: "#ffffff", ac: "#e3b23c" });
+    LIB = [a, b];
+  }
+  LIB.forEach(l => { l.mk = Object.assign(defMk(), l.mk || {}); });
+  const RT = {}; // runtime: id -> { src, disc }
+  const byId = id => LIB.find(l => l.id === id);
+  const cur = () => byId(S.active) || LIB[0];
+  if (!byId(S.active)) S.active = LIB[0].id;
+
+  function save() {
+    keep("discprinter", S);
+    keep("discprinter-logos", LIB.map(l => ({ id: l.id, name: l.name, kind: l.kind, data: l.data, mk: l.mk, fill: l.fill, bgOn: l.bgOn, bgCol: l.bgCol })));
+  }
+
+  // ---------- logo maker ----------
+  const FONT = (w, s) => w + " " + s + "px Archivo, Arial, sans-serif";
+  function arcText(g, text, cx, cy, rad, top) {
+    const chars = [...text]; const ws = chars.map(ch => g.measureText(ch).width);
+    const total = ws.reduce((a, b) => a + b, 0) / rad;
+    let a = top ? -Math.PI / 2 - total / 2 : Math.PI / 2 + total / 2;
+    chars.forEach((ch, i) => {
+      const step = ws[i] / rad, mid = top ? a + step / 2 : a - step / 2;
+      g.save(); g.translate(cx + rad * Math.cos(mid), cy + rad * Math.sin(mid));
+      g.rotate(top ? mid + Math.PI / 2 : mid - Math.PI / 2);
+      g.fillText(ch, 0, 0); g.restore();
+      a = top ? a + step : a - step;
+    });
+  }
+  function fitArc(g, text, weight, size, maxAngle, rad) {
+    let s = size; g.font = FONT(weight, s);
+    while (s > 20 && g.measureText(text).width / rad > maxAngle) { s -= 2; g.font = FONT(weight, s); }
+  }
+  function fitWidth(g, text, size, maxW) {
+    let s = size; g.font = FONT(800, s);
+    while (s > 20 && g.measureText(text).width > maxW) { s -= 4; g.font = FONT(800, s); }
+    return s;
+  }
+  function drawIcon(g, kind, cx, cy, sz, col, line) {
+    g.fillStyle = col;
+    if (kind === "flag") {
+      g.fillStyle = line; g.fillRect(cx - sz * 0.04, cy - sz * 0.5, sz * 0.08, sz * 0.95);
+      g.beginPath(); g.ellipse(cx, cy + sz * 0.45, sz * 0.38, sz * 0.07, 0, 0, Math.PI * 2); g.fill();
+      g.fillStyle = col; g.beginPath(); g.moveTo(cx + sz * 0.04, cy - sz * 0.5); g.lineTo(cx + sz * 0.5, cy - sz * 0.32); g.lineTo(cx + sz * 0.04, cy - sz * 0.14); g.closePath(); g.fill();
+    } else if (kind === "trophy") {
+      g.beginPath(); g.moveTo(cx - sz * 0.32, cy - sz * 0.48); g.lineTo(cx + sz * 0.32, cy - sz * 0.48);
+      g.quadraticCurveTo(cx + sz * 0.3, cy + sz * 0.05, cx, cy + sz * 0.1); g.quadraticCurveTo(cx - sz * 0.3, cy + sz * 0.05, cx - sz * 0.32, cy - sz * 0.48); g.fill();
+      g.lineWidth = sz * 0.06; g.strokeStyle = col;
+      g.beginPath(); g.arc(cx - sz * 0.32, cy - sz * 0.3, sz * 0.13, Math.PI * 0.5, Math.PI * 1.5); g.stroke();
+      g.beginPath(); g.arc(cx + sz * 0.32, cy - sz * 0.3, sz * 0.13, Math.PI * 1.5, Math.PI * 0.5); g.stroke();
+      g.fillRect(cx - sz * 0.05, cy + sz * 0.08, sz * 0.1, sz * 0.22);
+      g.fillRect(cx - sz * 0.22, cy + sz * 0.3, sz * 0.44, sz * 0.1);
+      g.fillRect(cx - sz * 0.28, cy + sz * 0.4, sz * 0.56, sz * 0.08);
+    } else if (kind === "star") {
+      g.beginPath();
+      for (let i = 0; i < 10; i++) { const r = i % 2 ? sz * 0.21 : sz * 0.5, an = -Math.PI / 2 + i * Math.PI / 5; g.lineTo(cx + r * Math.cos(an), cy + r * Math.sin(an)); }
+      g.closePath(); g.fill();
+    }
+  }
+  function drawMade(m) {
+    const N = 1000, c = document.createElement("canvas"); c.width = c.height = N; const g = c.getContext("2d");
+    const cx = N / 2;
+    g.fillStyle = m.bg; g.beginPath(); g.arc(cx, cx, cx, 0, Math.PI * 2); g.fill();
+    if (m.ring) { g.strokeStyle = m.fg; g.lineWidth = N * 0.012; g.beginPath(); g.arc(cx, cx, N * 0.43, 0, Math.PI * 2); g.stroke(); }
+    g.fillStyle = m.fg; g.textAlign = "center"; g.textBaseline = "middle";
+    const textR = N * 0.465, top = m.top.trim().toUpperCase(), bot = m.bot.trim().toUpperCase(), mid = m.mid.trim();
+    if (top) { fitArc(g, top, 800, 70, Math.PI * 0.95, textR); arcText(g, top, cx, cx, textR - 2, true); }
+    if (bot) { fitArc(g, bot, 700, 62, Math.PI * 0.8, textR); arcText(g, bot, cx, cx, textR - 2, false); }
+    const inner = top || bot || m.ring ? N * 0.36 : N * 0.46;
+    if (m.icon !== "none") {
+      const sz = inner * (mid ? 1.0 : 1.3);
+      drawIcon(g, m.icon, cx, cx - (mid ? inner * 0.22 : 0), sz, m.ac, m.fg);
+      if (mid) { g.fillStyle = m.fg; fitWidth(g, mid, inner * 0.42, inner * 1.4); g.fillText(mid, cx, cx + inner * 0.55); }
+    } else if (mid) {
+      const s = fitWidth(g, mid, inner * 0.9, inner * 1.6); g.fillStyle = m.fg; g.fillText(mid, cx, cx + s * 0.04);
+    }
+    return c;
+  }
+
+  // ---------- disc rendering ----------
+  function buildDisc(l) {
+    const rt = RT[l.id] || (RT[l.id] = {});
+    const src = l.kind === "make" ? (rt.made = drawMade(l.mk)) : rt.img;
+    const px = Math.round(S.dia * PXMM);
+    const c = document.createElement("canvas"); c.width = c.height = px; const g = c.getContext("2d");
+    g.save(); g.beginPath(); g.arc(px / 2, px / 2, px / 2, 0, Math.PI * 2); g.clip();
+    if (l.bgOn) { g.fillStyle = l.bgCol; g.fillRect(0, 0, px, px); }
+    const lw = src ? (src.naturalWidth || src.width) : 0, lh = src ? (src.naturalHeight || src.height) : 0;
+    if (lw && lh) {
+      const box = px * l.fill / 100, r = Math.min(box / lw, box / lh), w = lw * r, h = lh * r;
+      g.imageSmoothingQuality = "high"; g.drawImage(src, (px - w) / 2, (px - h) / 2, w, h);
+    } else {
+      g.fillStyle = "#e4e8e2"; g.fillRect(0, 0, px, px);
+      g.fillStyle = "#7d877f"; g.textAlign = "center"; g.textBaseline = "middle"; g.font = FONT(600, px * 0.12);
+      g.fillText("No image yet", px / 2, px / 2);
+    }
+    g.restore();
+    rt.disc = c.toDataURL("image/png");
+    rt.empty = !(lw && lh);
+  }
+  function loadUpload(l) {
+    return new Promise(res => {
+      if (l.kind !== "upload" || !l.data) return res();
+      const img = new Image(); img.onload = () => { (RT[l.id] || (RT[l.id] = {})).img = img; res(); }; img.onerror = () => res(); img.src = l.data;
+    });
+  }
+
+  // ---------- positions ----------
+  function positions() {
+    const out = [];
+    for (let r = 0; r < S.rows; r++) for (let c = 0; c < S.cols; c++) out.push({ i: r * S.cols + c, x: S.ml + c * S.px, y: S.mt + r * S.py });
+    return out;
+  }
+  function ensureAssign() {
+    const n = S.rows * S.cols;
+    if (!Array.isArray(S.assign) || S.assign.length !== n) S.assign = Array(n).fill(cur().id);
+    S.assign = S.assign.map(a => (a && byId(a)) ? a : "");
+  }
+
+  // ---------- library UI ----------
+  function renderLib() {
+    const box = $("lib"); box.textContent = "";
+    const counts = {}; S.assign.forEach(a => { if (a) counts[a] = (counts[a] || 0) + 1; });
+    LIB.forEach(l => {
+      const b = document.createElement("button"); b.type = "button"; b.className = "lg";
+      b.setAttribute("aria-pressed", l.id === S.active); b.title = l.name; b.setAttribute("aria-label", l.name + ", on " + (counts[l.id] || 0) + " stickers");
+      const im = document.createElement("img"); im.alt = ""; im.src = RT[l.id] && RT[l.id].disc || ""; b.appendChild(im);
+      const n = document.createElement("span"); n.className = "n"; n.textContent = counts[l.id] || 0; b.appendChild(n);
+      b.addEventListener("click", () => { S.active = l.id; fillEditor(); renderLib(); save(); });
+      box.appendChild(b);
+    });
+    const add = document.createElement("button"); add.type = "button"; add.className = "add"; add.textContent = "+"; add.title = "Add a logo"; add.setAttribute("aria-label", "Add a logo");
+    add.addEventListener("click", () => {
+      const l = newLogo("upload", "Logo " + (LIB.length + 1)); LIB.push(l); S.active = l.id;
+      buildDisc(l); fillEditor(); renderAll(); save();
+    });
+    box.appendChild(add);
+    $("lgDel").disabled = LIB.length < 2;
+  }
+  function fillEditor() {
+    const l = cur();
+    $("lgName").value = l.name;
+    $("tabUp").setAttribute("aria-selected", l.kind === "upload"); $("tabMake").setAttribute("aria-selected", l.kind === "make");
+    $("paneUp").hidden = l.kind !== "upload"; $("paneMake").hidden = l.kind !== "make";
+    $("upStatus").textContent = "";
+    $("upNote").textContent = l.data ? "Image loaded. Choose another to replace it." : "PNG or JPG. A logo on a white or clear background works best.";
+    $("mkTop").value = l.mk.top; $("mkBot").value = l.mk.bot; $("mkMid").value = l.mk.mid; $("mkIcon").value = l.mk.icon;
+    $("mkBg").value = l.mk.bg; $("mkFg").value = l.mk.fg; $("mkAc").value = l.mk.ac; $("mkRing").checked = l.mk.ring;
+    $("fill").value = l.fill; $("fillOut").textContent = l.fill + "%";
+    $("bgOn").checked = l.bgOn; $("bgCol").value = l.bgCol;
+  }
+  function changed() { buildDisc(cur()); renderAll(); save(); }
+
+  // ---------- sheet preview ----------
+  const NS = "http://www.w3.org/2000/svg";
+  function render() {
+    ensureAssign();
+    const svg = $("svg"); svg.textContent = "";
+    const d = S.dia, r = d / 2, selCol = getComputedStyle(document.documentElement).getPropertyValue("--sel").trim() || "#9a6b1c";
+    let used = 0, outside = false; const kinds = new Set();
+    positions().forEach(p => {
+      const a = S.assign[p.i]; if (a) { used++; kinds.add(a); }
+      if (p.x < 0 || p.y < 0 || p.x + d > A4W || p.y + d > A4H) outside = true;
+      const g = document.createElementNS(NS, "g"); g.setAttribute("class", "pos"); g.setAttribute("tabindex", "0"); g.setAttribute("role", "button");
+      g.setAttribute("aria-label", "Sticker " + (p.i + 1) + ": " + (a ? byId(a).name : "empty"));
+      const base = document.createElementNS(NS, "circle");
+      base.setAttribute("cx", p.x + r); base.setAttribute("cy", p.y + r); base.setAttribute("r", r);
+      base.setAttribute("fill", "#e4e8e2"); base.setAttribute("stroke", "#b9c0b6"); base.setAttribute("stroke-width", "0.3");
+      g.appendChild(base);
+      if (a && RT[a] && RT[a].disc) {
+        const im = document.createElementNS(NS, "image");
+        im.setAttribute("href", RT[a].disc); im.setAttribute("x", p.x); im.setAttribute("y", p.y); im.setAttribute("width", d); im.setAttribute("height", d);
+        g.appendChild(im);
+      }
+      if (a === S.active) {
+        const ring = document.createElementNS(NS, "circle");
+        ring.setAttribute("cx", p.x + r); ring.setAttribute("cy", p.y + r); ring.setAttribute("r", r + 0.6);
+        ring.setAttribute("fill", "none"); ring.setAttribute("stroke", selCol); ring.setAttribute("stroke-width", "0.7");
+        g.appendChild(ring);
+      }
+      const toggle = () => { S.assign[p.i] = S.assign[p.i] === S.active ? "" : S.active; renderAll(); save(); };
+      g.addEventListener("click", toggle);
+      g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+      svg.appendChild(g);
+    });
+    $("count").textContent = used + " of " + S.assign.length + " stickers · " + kinds.size + (kinds.size === 1 ? " logo" : " logos") + " · " + S.dia + " mm";
+    const st = $("status");
+    if (outside) { st.textContent = "Some circles fall off the A4 page. Check the measurements."; st.className = "status err"; st.dataset.kind = "layout"; }
+    else if (st.dataset.kind === "layout") { st.textContent = ""; st.className = "status"; st.dataset.kind = ""; }
+  }
+  function renderAll() { render(); renderLib(); }
+
+  // ---------- sheet inputs ----------
+  const numIds = ["dia", "cols", "rows", "px", "py", "ml", "mt", "ox", "oy"];
+  function fillSheet() {
+    numIds.forEach(k => $(k).value = S[k]);
+    $("preset").value = S.preset;
+    $("presetNote").textContent = S.preset === "custom"
+      ? "Using your own measurements below."
+      : "A common layout, used as a starting point. Brands vary, so check it against your sheet with the test print and adjust under Edit measurements.";
+  }
+  PRESETS.forEach(p => { const o = document.createElement("option"); o.value = p.id; o.textContent = p.name; $("preset").appendChild(o); });
+  $("preset").addEventListener("change", e => {
+    const p = PRESETS.find(x => x.id === e.target.value); S.preset = p.id;
+    if (p.id !== "custom") Object.assign(S, { dia: p.dia, cols: p.cols, rows: p.rows, px: p.px, py: p.py }, centred(p));
+    else $("measure").open = true;
+    S.assign = null; fillSheet(); LIB.forEach(buildDisc); renderAll(); save();
+  });
+  numIds.forEach(k => $(k).addEventListener("input", e => {
+    const v = parseFloat(e.target.value); if (!isFinite(v)) return;
+    const old = S[k]; S[k] = (k === "cols" || k === "rows") ? Math.max(1, Math.min(30, Math.round(v))) : v;
+    if (["dia", "cols", "rows", "px", "py", "ml", "mt"].includes(k) && S.preset !== "custom") { S.preset = "custom"; fillSheet(); }
+    if (k === "dia" && old !== S[k] && S[k] >= 5) LIB.forEach(buildDisc);
+    if (k === "cols" || k === "rows") S.assign = null;
+    renderAll(); save();
+  }));
+  $("centre").addEventListener("click", () => { Object.assign(S, centred(S)); fillSheet(); renderAll(); save(); });
+
+  // ---------- logo editor inputs ----------
+  $("lgName").addEventListener("input", e => { cur().name = e.target.value || "Logo"; renderLib(); save(); });
+  $("lgDel").addEventListener("click", () => {
+    if (LIB.length < 2) return;
+    const id = S.active; LIB = LIB.filter(l => l.id !== id); delete RT[id];
+    S.assign = S.assign.map(a => a === id ? "" : a); S.active = LIB[0].id;
+    fillEditor(); renderAll(); save(); status("Logo deleted.", "");
+  });
+  $("tabUp").addEventListener("click", () => { const l = cur(); if (l.kind === "upload") return; l.kind = "upload"; l.fill = 85; fillEditor(); changed(); });
+  $("tabMake").addEventListener("click", () => { const l = cur(); if (l.kind === "make") return; l.kind = "make"; l.fill = 100; l.bgOn = false; fillEditor(); changed(); });
+  [["mkTop", "top"], ["mkBot", "bot"], ["mkMid", "mid"], ["mkIcon", "icon"], ["mkBg", "bg"], ["mkFg", "fg"], ["mkAc", "ac"], ["mkRing", "ring"]].forEach(([id, k]) => {
+    $(id).addEventListener(id === "mkIcon" || id === "mkRing" ? "change" : "input", e => {
+      cur().mk[k] = e.target.type === "checkbox" ? e.target.checked : e.target.value; changed();
+    });
+  });
+  $("fill").addEventListener("input", e => { cur().fill = +e.target.value; $("fillOut").textContent = cur().fill + "%"; changed(); });
+  $("bgOn").addEventListener("change", e => { cur().bgOn = e.target.checked; changed(); });
+  $("bgCol").addEventListener("input", e => { cur().bgCol = e.target.value; changed(); });
+  function upStatus(msg, kind) { const el = $("upStatus"); el.textContent = msg; el.className = "status " + (kind || ""); }
+  $("pickBtn").addEventListener("click", () => {
+    upStatus("Opening your photos…", "");
+    setTimeout(() => { if ($("upStatus").textContent.startsWith("Opening")) upStatus("If no photo picker opened, try opening this page in Chrome or Safari.", "err"); }, 4000);
+    try { const inp = $("logo"); inp.value = ""; if (inp.showPicker) { try { inp.showPicker(); return; } catch (e) {} } inp.click(); }
+    catch (e) { upStatus("This view couldn't open the photo picker. Try opening the page in Chrome.", "err"); }
+  });
+  function useFile(f) {
+    if (!f) { upStatus("No photo chosen.", ""); return; }
+    const l = cur();
+    upStatus("Loading " + (f.name || "photo") + "…", "");
+    if (/heic|heif/i.test(f.type) || /\.(heic|heif)$/i.test(f.name || "")) {
+      upStatus("That photo is in HEIC format, which browsers can't open. Save it as JPG or PNG (or screenshot it) and try again.", "err"); return;
+    }
+    const url = URL.createObjectURL(f);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const k = Math.min(1, 1200 / Math.max(img.naturalWidth, img.naturalHeight));
+        const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+        c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+        URL.revokeObjectURL(url);
+        l.data = c.toDataURL("image/png"); (RT[l.id] || (RT[l.id] = {})).img = c;
+        if (l.kind !== "upload") { l.kind = "upload"; l.fill = 85; }
+        if (/^Logo \d+$/.test(l.name) || /^Example/.test(l.name)) l.name = (f.name || "My logo").replace(/\.[^.]+$/, "").slice(0, 30);
+        fillEditor(); changed();
+        upStatus("Logo added. Tap circles on the sheet to place it.", "ok");
+      } catch (e) { upStatus("Couldn't process that image (" + (e && e.message || "error") + "). Try a different photo.", "err"); }
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); upStatus("That file isn't an image this browser can read. Try a JPG or PNG.", "err"); };
+    img.src = url;
+  }
+  $("logo").addEventListener("change", e => useFile(e.target.files && e.target.files[0]));
+  // Also accept a pasted or dropped image
+  document.addEventListener("paste", e => { const it = [...(e.clipboardData && e.clipboardData.files || [])].find(f => f.type.startsWith("image/")); if (it) { e.preventDefault(); useFile(it); } });
+  document.addEventListener("dragover", e => e.preventDefault());
+  document.addEventListener("drop", e => { const it = [...(e.dataTransfer && e.dataTransfer.files || [])].find(f => f.type.startsWith("image/")); if (it) { e.preventDefault(); useFile(it); } });
+  $("fillEmpty").addEventListener("click", () => { S.assign = S.assign.map(a => a || S.active); renderAll(); save(); });
+  $("all").addEventListener("click", () => { S.assign = S.assign.map(() => S.active); renderAll(); save(); });
+  $("none").addEventListener("click", () => { S.assign = S.assign.map(() => ""); renderAll(); save(); });
+
+  // ---------- PDF ----------
+  function status(msg, kind) { const s = $("status"); s.textContent = msg; s.className = "status " + (kind || ""); s.dataset.kind = "msg"; }
+  function newDoc() { return new window.jspdf.jsPDF({ unit: "mm", format: "a4", orientation: "portrait", compress: true }); }
+  function buildStickers() {
+    const doc = newDoc(), d = S.dia; let n = 0, blank = 0;
+    positions().forEach(p => {
+      const a = S.assign[p.i]; if (!a) return;
+      const rt = RT[a]; if (!rt || rt.empty) { blank++; return; }
+      n++; doc.addImage(rt.disc, "PNG", p.x + S.ox, p.y + S.oy, d, d, "disc-" + a, "FAST");
+    });
+    return { doc, n, blank };
+  }
+  function buildTest() {
+    const doc = newDoc(), r = S.dia / 2, arm = Math.min(4, r * 0.6);
+    doc.setLineWidth(0.15); doc.setDrawColor(0);
+    positions().forEach(p => {
+      const cx = p.x + r + S.ox, cy = p.y + r + S.oy;
+      doc.circle(cx, cy, r, "S"); doc.line(cx - arm, cy, cx + arm, cy); doc.line(cx, cy - arm, cx, cy + arm);
+    });
+    const y = Math.max(6, Math.min(10, S.mt - 3)), x0 = 55;
+    doc.setLineWidth(0.3); doc.line(x0, y, x0 + 100, y); doc.line(x0, y - 2, x0, y + 2); doc.line(x0 + 100, y - 2, x0 + 100, y + 2);
+    doc.setFontSize(7); doc.text("This line should measure exactly 100 mm. If not, the print was scaled.", x0, y + 4);
+    doc.text("Nudge used: right " + S.ox + " mm, down " + S.oy + " mm", x0, A4H - 5);
+    return doc;
+  }
+  async function offer(doc, filename) {
+    const blob = doc.output("blob");
+    if (!window.claude) {
+      const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename;
+      document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      status("Downloaded " + filename + ". Print it at Actual size / 100%.", "ok"); return;
+    }
+    let dl = null;
+    try { dl = await window.claude.use("downloads"); } catch (e) { dl = null; }
+    if (!dl) { status("Saving isn't available in this view. Open the page in the Claude app or claude.ai to save the PDF.", "err"); return; }
+    try { await dl.save({ filename, data: blob }); status("Saved " + filename + ". Print it at Actual size / 100%.", "ok"); }
+    catch (e) {
+      if (e && e.code === "declined") status("Save cancelled.", "");
+      else if (e && e.code === "rate_limited") status("A save prompt is already open. Finish that one first.", "err");
+      else status("Couldn't save the file here (" + ((e && e.code) || "unknown") + ").", "err");
+    }
+  }
+  $("savePdf").addEventListener("click", async () => {
+    if (!window.jspdf) { status("The PDF engine didn't load. Check your connection and reload.", "err"); return; }
+    const { doc, n, blank } = buildStickers();
+    if (!n) { status(blank ? "The placed logo has no image yet. Upload one first." : "No stickers placed. Tap some circles first.", "err"); return; }
+    await offer(doc, "trophy-discs-" + S.dia + "mm.pdf");
+    if (blank) status("Saved, but " + blank + " sticker(s) were skipped because their logo has no image yet.", "err");
+  });
+  $("saveTest").addEventListener("click", async () => {
+    if (!window.jspdf) { status("The PDF engine didn't load. Check your connection and reload.", "err"); return; }
+    await offer(buildTest(), "test-sheet-" + S.dia + "mm.pdf");
+  });
+
+  // ---------- boot ----------
+  fillSheet(); fillEditor();
+  Promise.all(LIB.map(loadUpload)).then(() => { LIB.forEach(buildDisc); renderAll();
+    if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => { LIB.forEach(buildDisc); renderAll(); }); });
+  if (window.matchMedia) { const mq = matchMedia("(prefers-color-scheme: dark)"); mq.addEventListener && mq.addEventListener("change", render); }
+})();
+</script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").then(reg => {
+      // When a new version is installed, reload once so the latest version shows.
+      reg.addEventListener("updatefound", () => {
+        const w = reg.installing; if (!w) return;
+        w.addEventListener("statechange", () => { if (w.state === "activated" && navigator.serviceWorker.controller) location.reload(); });
+      });
+    }).catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
