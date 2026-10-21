@@ -307,7 +307,7 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
 
   function save() {
     keep("discprinter", S);
-    keep("discprinter-logos", LIB.map(l => ({ id: l.id, name: l.name, kind: l.kind, data: l.data, mk: l.mk, fill: l.fill, bgOn: l.bgOn, bgCol: l.bgCol, dx: l.dx, dy: l.dy })));
+    keep("discprinter-logos", LIB.map(l => ({ id: l.id, name: l.name, kind: l.kind, data: l.data, mk: l.mk, fill: l.fill, bgOn: l.bgOn, bgCol: l.bgCol, dx: l.dx, dy: l.dy, trimmed: !!l.trimmed })));
   }
 
   // ---------- logo maker ----------
@@ -398,7 +398,22 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
   function loadUpload(l) {
     return new Promise(res => {
       if (l.kind !== "upload" || !l.data) return res();
-      const img = new Image(); img.onload = () => { (RT[l.id] || (RT[l.id] = {})).img = img; res(); }; img.onerror = () => res(); img.src = l.data;
+      const img = new Image();
+      img.onload = () => {
+        const rt = RT[l.id] || (RT[l.id] = {});
+        if (!l.trimmed) {
+          // Logos saved before auto-trim existed: trim them once now so they sit centred.
+          try {
+            const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
+            c.getContext("2d").drawImage(img, 0, 0);
+            const t = trimEdges(c);
+            if (t !== c) { l.data = t.toDataURL("image/png"); rt.img = t; } else { rt.img = img; }
+          } catch (e) { rt.img = img; }
+          l.trimmed = true; save();
+        } else { rt.img = img; }
+        res();
+      };
+      img.onerror = () => res(); img.src = l.data;
     });
   }
 
@@ -562,7 +577,7 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
         URL.revokeObjectURL(url);
         const c = trimEdges(c0);
         l.data = c.toDataURL("image/png"); (RT[l.id] || (RT[l.id] = {})).img = c;
-        l.dx = 0; l.dy = 0;
+        l.dx = 0; l.dy = 0; l.trimmed = true;
         if (l.kind !== "upload") { l.kind = "upload"; l.fill = 85; }
         if (/^Logo \d+$/.test(l.name) || /^My logo$/.test(l.name) || /^Example/.test(l.name)) l.name = (f.name || "My logo").replace(/\.[^.]+$/, "").slice(0, 30);
         ensureAssign();
