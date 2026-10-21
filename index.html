@@ -425,8 +425,9 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
   // so white inside the logo (a watch face, white lettering) is left alone. Soft edge for anti-aliasing.
   function knockOutWhite(c) {
     const W = c.width, H = c.height, g = c.getContext("2d"), id = g.getImageData(0, 0, W, H), d = id.data;
-    const isWhite = i => d[i + 3] > 0 && d[i] > 232 && d[i + 1] > 232 && d[i + 2] > 232;
-    const nearWhite = i => d[i + 3] > 0 && d[i] > 205 && d[i + 1] > 205 && d[i + 2] > 205;
+    // JPEG backgrounds are "nearly white" (noise, slight tint), so be generous about what counts as background
+    const isWhite = i => d[i + 3] > 0 && d[i] > 218 && d[i + 1] > 218 && d[i + 2] > 218 && Math.max(d[i], d[i + 1], d[i + 2]) - Math.min(d[i], d[i + 1], d[i + 2]) < 28;
+    const nearWhite = i => d[i + 3] > 0 && d[i] > 170 && d[i + 1] > 170 && d[i + 2] > 170;
     // Is there any white on the border at all? If not, nothing to do.
     let any = false;
     for (let x = 0; x < W && !any; x++) { if (isWhite(x * 4) || isWhite(((H - 1) * W + x) * 4)) any = true; }
@@ -441,12 +442,24 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
       if (x > 0) push(x - 1, y); if (x < W - 1) push(x + 1, y); if (y > 0) push(x, y - 1); if (y < H - 1) push(x, y + 1);
     }
     let n = 0;
+    // fringe: up to two pixels in from the removed area, light pixels fade out so no hairline is left
+    const fringe = new Uint8Array(W * H);
     for (let k = 0; k < W * H; k++) {
-      if (seen[k]) { d[k * 4 + 3] = 0; n++; continue; }
-      // soften the fringe: near-white pixels next to a removed one fade out
+      if (!seen[k]) continue;
+      n++;
       const x = k % W, y = (k - x) / W;
-      if (nearWhite(k * 4) && ((x > 0 && seen[k - 1]) || (x < W - 1 && seen[k + 1]) || (y > 0 && seen[k - W]) || (y < H - 1 && seen[k + W]))) {
-        const lum = (d[k * 4] + d[k * 4 + 1] + d[k * 4 + 2]) / 3; d[k * 4 + 3] = Math.round(d[k * 4 + 3] * (1 - (lum - 205) / 50));
+      for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) {
+        const xx = x + dx, yy = y + dy; if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue;
+        const j = yy * W + xx; if (!seen[j] && nearWhite(j * 4)) fringe[j] = Math.max(fringe[j], 3 - Math.max(Math.abs(dx), Math.abs(dy)));
+      }
+    }
+    for (let k = 0; k < W * H; k++) {
+      if (seen[k]) { d[k * 4 + 3] = 0; continue; }
+      if (fringe[k]) {
+        const lum = (d[k * 4] + d[k * 4 + 1] + d[k * 4 + 2]) / 3;           // 170..255
+        const light = Math.min(1, Math.max(0, (lum - 170) / 60));            // 0 at 170, 1 at 230+
+        const near = fringe[k] / 2;                                           // 1 next to the hole, 0.5 one further out
+        d[k * 4 + 3] = Math.round(d[k * 4 + 3] * (1 - light * near));
       }
     }
     if (!n) return c;
