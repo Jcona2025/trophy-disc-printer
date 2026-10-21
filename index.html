@@ -257,13 +257,22 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
 <script>
 (function () {
   const A4W = 210, A4H = 297, PXMM = 24;
-  // Starting points only. Brands differ, so measure your own sheet.
+  // Exact layouts from Label Planet's published templates (labelplanet.co.uk, checked 21 Oct 2026).
+  // Many other brands sell the same cuts under other codes ("aka"). Sheets are made to about ±1 mm,
+  // so the test sheet is still the final check. ml/mt = left/top margin to the first circle's edge.
   const PRESETS = [
-    { id: "r25", name: "25 mm circles · 70 per sheet (7 × 10)", dia: 25, cols: 7, rows: 10, px: 27, py: 27 },
-    { id: "r38", name: "38 mm circles · 35 per sheet (5 × 7)", dia: 38, cols: 5, rows: 7, px: 40, py: 40 },
-    { id: "r44", name: "44 mm circles · 24 per sheet (4 × 6)", dia: 44, cols: 4, rows: 6, px: 46, py: 46 },
-    { id: "r50", name: "50 mm circles · 20 per sheet (4 × 5)", dia: 50, cols: 4, rows: 5, px: 51, py: 55 },
-    { id: "r51", name: "51 mm circles · 15 per sheet (3 × 5)", dia: 51, cols: 3, rows: 5, px: 65, py: 56 },
+    { id: "lp70_25",  name: "25 mm · 70 per sheet (7 × 10) · LP70/25R",  dia: 25,   cols: 7, rows: 10, px: 27, py: 27, ml: 11.5,  mt: 14.5 },
+    { id: "lp40_32",  name: "32 mm · 40 per sheet (5 × 8) · LP40/32R",   dia: 32,   cols: 5, rows: 8,  px: 35, py: 34.9, ml: 19,  mt: 10.35 },
+    { id: "lp35_35",  name: "35 mm · 35 per sheet (5 × 7) · LP35/35R",   dia: 35,   cols: 5, rows: 7,  px: 39, py: 38, ml: 9.5,   mt: 17 },
+    { id: "lp35_37",  name: "37 mm · 35 per sheet (5 × 7) · LP35/37R",   dia: 37,   cols: 5, rows: 7,  px: 39, py: 39, ml: 8.5,   mt: 13 },
+    { id: "lp24_40",  name: "40 mm · 24 per sheet (4 × 6) · LP24/40R",   dia: 40,   cols: 4, rows: 6,  px: 46, py: 46, ml: 16,    mt: 13.5 },
+    { id: "lp24_45",  name: "45 mm · 24 per sheet (4 × 6) · LP24/45R",   dia: 45,   cols: 4, rows: 6,  px: 49, py: 48, ml: 9,     mt: 6 },
+    { id: "lp20_48",  name: "48 mm · 20 per sheet (4 × 5) · LP20/48R",   dia: 48,   cols: 4, rows: 5,  px: 50, py: 51, ml: 6,     mt: 22.5 },
+    { id: "lp15_51",  name: "51 mm · 15 per sheet (3 × 5) · LP15/51R",   dia: 51,   cols: 3, rows: 5,  px: 53, py: 53, ml: 26.5,  mt: 17 },
+    { id: "lp15_54",  name: "54 mm · 15 per sheet (3 × 5) · LP15/54R",   dia: 54,   cols: 3, rows: 5,  px: 58, py: 57, ml: 20,    mt: 7.5 },
+    { id: "lp12_57",  name: "57 mm · 12 per sheet (3 × 4) · LP12/57R",   dia: 57,   cols: 3, rows: 4,  px: 61, py: 61, ml: 15.5,  mt: 28.5 },
+    { id: "lp12_60",  name: "60 mm · 12 per sheet (3 × 4) · LP12/60R",   dia: 60,   cols: 3, rows: 4,  px: 64, py: 64, ml: 11,    mt: 22.5 },
+    { id: "lp12_64",  name: "63.5 mm · 12 per sheet (3 × 4) · LP12/64R, Avery L7670", dia: 63.5, cols: 3, rows: 4, px: 68, py: 68, ml: 5.25, mt: 14.75 },
     { id: "custom", name: "Custom (my own measurements)" }
   ];
   function centred(p) {
@@ -277,8 +286,9 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
   const p0 = PRESETS[0];
   const saved = load("discprinter") || {};
   delete saved.sel;
-  let S = Object.assign({ preset: "r25", dia: p0.dia, cols: p0.cols, rows: p0.rows, px: p0.px, py: p0.py,
-    ox: 0, oy: 0, assign: null, active: "" }, centred(p0), saved);
+  if (saved.preset && !PRESETS.find(x => x.id === saved.preset)) saved.preset = "custom";
+  let S = Object.assign({ preset: p0.id, dia: p0.dia, cols: p0.cols, rows: p0.rows, px: p0.px, py: p0.py,
+    ox: 0, oy: 0, assign: null, active: "" }, { ml: p0.ml, mt: p0.mt }, saved);
 
   const defMk = () => ({ top: "Example Golf Club", bot: "Captain's Prize", mid: "2026", icon: "flag",
     bg: "#1f5a3a", fg: "#f2e6c4", ac: "#d8a63b", ring: true });
@@ -484,12 +494,12 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
     $("preset").value = S.preset;
     $("presetNote").textContent = S.preset === "custom"
       ? "Using your own measurements below."
-      : "A common layout, used as a starting point. Brands vary, so check it against your sheet with the test print and adjust under Edit measurements.";
+      : "Exact layout from the supplier's template. Other brands sell the same cut under other codes. Sheets are made to about ±1 mm, so run the test sheet once.";
   }
   PRESETS.forEach(p => { const o = document.createElement("option"); o.value = p.id; o.textContent = p.name; $("preset").appendChild(o); });
   $("preset").addEventListener("change", e => {
     const p = PRESETS.find(x => x.id === e.target.value); S.preset = p.id;
-    if (p.id !== "custom") Object.assign(S, { dia: p.dia, cols: p.cols, rows: p.rows, px: p.px, py: p.py }, centred(p));
+    if (p.id !== "custom") Object.assign(S, { dia: p.dia, cols: p.cols, rows: p.rows, px: p.px, py: p.py }, p.ml != null ? { ml: p.ml, mt: p.mt } : centred(p));
     else $("measure").open = true;
     S.assign = null; ensureAssign(); if (cur().data || cur().kind === "make") S.assign = S.assign.map(() => S.active);
     fillSheet(); LIB.forEach(buildDisc); renderAll(); save();
