@@ -201,7 +201,7 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
             <input type="range" id="fill" min="40" max="110" step="1">
           </label>
           <div class="nudge">
-            <span>Move logo <span class="mono" id="shiftOut"></span></span>
+            <span>Move this logo inside its sticker: <span class="mono" id="shiftOut"></span></span>
             <div class="pad" role="group" aria-label="Move the logo inside the circle">
               <button type="button" data-dx="0" data-dy="-0.5" aria-label="Up">▲</button>
               <button type="button" data-dx="-0.5" data-dy="0" aria-label="Left">◀</button>
@@ -239,6 +239,7 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
         <p class="status" id="status"></p>
         <details id="calib">
           <summary>First time on this printer? Calibrate once</summary>
+          <p class="hint">This shifts the <strong>whole print</strong> on the paper to match your printer. It is not for positioning a logo; the arrows in step 2 do that.</p>
           <p class="hint">1. <button type="button" id="saveTest" class="inline">Save test sheet</button> and print it on <strong>plain paper</strong> at 100%.<br>
             2. Hold it over a sticker sheet up to a window. The crosses should sit in the middle of the circles and the line should measure 100 mm.<br>
             3. If every cross is off by the same amount, type that here. The setting is remembered.</p>
