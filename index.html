@@ -200,6 +200,10 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
           <label><span>Logo size: <span class="mono" id="fillOut"></span> of the circle</span>
             <input type="range" id="fill" min="40" max="110" step="1">
           </label>
+          <div class="row" id="trimRow">
+            <label class="toggle"><input type="checkbox" id="trimOn"> Trim blank edges off the picture</label>
+            <button type="button" id="logoReset" title="Original picture, trimmed, centred, 85% size">Reset logo</button>
+          </div>
           <div class="nudge">
             <span>Move this logo inside its sticker: <span class="mono" id="shiftOut"></span></span>
             <div class="pad" role="group" aria-label="Move the logo inside the circle">
@@ -295,7 +299,7 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
     bg: "#1f5a3a", fg: "#f2e6c4", ac: "#d8a63b", ring: true });
   let uid = 0; const newId = () => "L" + Date.now().toString(36) + (uid++);
   function newLogo(kind, name) {
-    return { id: newId(), name, kind, data: "", mk: defMk(), fill: kind === "make" ? 100 : 85, bgOn: false, bgCol: "#ffffff", dx: 0, dy: 0 };
+    return { id: newId(), name, kind, data: "", mk: defMk(), fill: kind === "make" ? 100 : 85, bgOn: false, bgCol: "#ffffff", dx: 0, dy: 0, trim: true };
   }
   let LIB = (load("discprinter-logos") || []).filter(l => l && l.id);
   if (!LIB.length) LIB = [newLogo("upload", "My logo")];
@@ -307,7 +311,7 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
 
   function save() {
     keep("discprinter", S);
-    keep("discprinter-logos", LIB.map(l => ({ id: l.id, name: l.name, kind: l.kind, data: l.data, mk: l.mk, fill: l.fill, bgOn: l.bgOn, bgCol: l.bgCol, dx: l.dx, dy: l.dy, trimmed: !!l.trimmed })));
+    keep("discprinter-logos", LIB.map(l => ({ id: l.id, name: l.name, kind: l.kind, data: l.data, mk: l.mk, fill: l.fill, bgOn: l.bgOn, bgCol: l.bgCol, dx: l.dx, dy: l.dy, trim: l.trim !== false })));
   }
 
   // ---------- logo maker ----------
@@ -395,24 +399,23 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
     rt.disc = c.toDataURL("image/png");
     rt.empty = !(lw && lh);
   }
+  // The stored picture is always the original upload. Trimming happens here, at load time, so it
+  // can be switched off per logo and the original is never lost.
+  function prepareUpload(l) {
+    const rt = RT[l.id] || (RT[l.id] = {});
+    const src = rt.orig; if (!src) return;
+    if (l.trim === false) { rt.img = src; return; }
+    try {
+      const c = document.createElement("canvas"); c.width = src.naturalWidth || src.width; c.height = src.naturalHeight || src.height;
+      c.getContext("2d").drawImage(src, 0, 0);
+      rt.img = trimEdges(c);
+    } catch (e) { rt.img = src; }
+  }
   function loadUpload(l) {
     return new Promise(res => {
       if (l.kind !== "upload" || !l.data) return res();
       const img = new Image();
-      img.onload = () => {
-        const rt = RT[l.id] || (RT[l.id] = {});
-        if (!l.trimmed) {
-          // Logos saved before auto-trim existed: trim them once now so they sit centred.
-          try {
-            const c = document.createElement("canvas"); c.width = img.naturalWidth; c.height = img.naturalHeight;
-            c.getContext("2d").drawImage(img, 0, 0);
-            const t = trimEdges(c);
-            if (t !== c) { l.data = t.toDataURL("image/png"); rt.img = t; } else { rt.img = img; }
-          } catch (e) { rt.img = img; }
-          l.trimmed = true; save();
-        } else { rt.img = img; }
-        res();
-      };
+      img.onload = () => { (RT[l.id] || (RT[l.id] = {})).orig = img; prepareUpload(l); res(); };
       img.onerror = () => res(); img.src = l.data;
     });
   }
@@ -461,6 +464,7 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
     $("fill").value = l.fill; $("fillOut").textContent = l.fill + "%";
     $("shiftOut").textContent = (l.dx || l.dy) ? ((l.dx > 0 ? "right " : l.dx < 0 ? "left " : "") + (l.dx ? Math.abs(l.dx) + " mm " : "") + (l.dy > 0 ? "down " : l.dy < 0 ? "up " : "") + (l.dy ? Math.abs(l.dy) + " mm" : "")).trim() : "centred";
     $("bgOn").checked = l.bgOn; $("bgCol").value = l.bgCol;
+    $("trimRow").hidden = l.kind !== "upload"; $("trimOn").checked = l.trim !== false;
   }
   function changed() { buildDisc(cur()); renderAll(); save(); }
 
@@ -551,6 +555,8 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
     fillEditor(); changed();
   }));
   $("shiftReset").addEventListener("click", () => { const l = cur(); l.dx = 0; l.dy = 0; fillEditor(); changed(); });
+  $("trimOn").addEventListener("change", e => { const l = cur(); l.trim = e.target.checked; prepareUpload(l); fillEditor(); changed(); });
+  $("logoReset").addEventListener("click", () => { const l = cur(); l.trim = true; l.dx = 0; l.dy = 0; l.fill = 85; l.bgOn = false; prepareUpload(l); fillEditor(); changed(); });
   $("bgOn").addEventListener("change", e => { cur().bgOn = e.target.checked; changed(); });
   $("bgCol").addEventListener("input", e => { cur().bgCol = e.target.value; changed(); });
   function upStatus(msg, kind) { const el = $("upStatus"); el.textContent = msg; el.className = "status " + (kind || ""); }
@@ -575,9 +581,9 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
         const c0 = document.createElement("canvas"); c0.width = Math.max(1, Math.round(img.naturalWidth * k)); c0.height = Math.max(1, Math.round(img.naturalHeight * k));
         c0.getContext("2d").drawImage(img, 0, 0, c0.width, c0.height);
         URL.revokeObjectURL(url);
-        const c = trimEdges(c0);
-        l.data = c.toDataURL("image/png"); (RT[l.id] || (RT[l.id] = {})).img = c;
-        l.dx = 0; l.dy = 0; l.trimmed = true;
+        l.data = c0.toDataURL("image/png"); (RT[l.id] || (RT[l.id] = {})).orig = c0;
+        l.dx = 0; l.dy = 0; l.trim = true; l.fill = 85;
+        prepareUpload(l);
         if (l.kind !== "upload") { l.kind = "upload"; l.fill = 85; }
         if (/^Logo \d+$/.test(l.name) || /^My logo$/.test(l.name) || /^Example/.test(l.name)) l.name = (f.name || "My logo").replace(/\.[^.]+$/, "").slice(0, 30);
         ensureAssign();
@@ -593,10 +599,16 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
   // Cut the blank border off an uploaded picture (white or transparent), so the logo itself is what gets centred.
   function trimEdges(c) {
     const g = c.getContext("2d"), W = c.width, H = c.height, d = g.getImageData(0, 0, W, H).data;
-    const blank = i => d[i + 3] < 16 || (d[i] > 238 && d[i + 1] > 238 && d[i + 2] > 238);
-    let x0 = W, y0 = H, x1 = -1, y1 = -1;
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { if (!blank((y * W + x) * 4)) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; } }
-    if (x1 < 0 || (x1 - x0) < 8 || (y1 - y0) < 8) return c;
+    // "ink" = clearly visible and clearly not white: alpha > 40 and not a near-white/light-grey pixel
+    const ink = i => d[i + 3] > 40 && !(d[i] > 225 && d[i + 1] > 225 && d[i + 2] > 225);
+    const cols = new Uint32Array(W), rows = new Uint32Array(H);
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { if (ink((y * W + x) * 4)) { cols[x]++; rows[y]++; } }
+    // a row/column counts only if at least 0.3% of it is ink, so stray dots and soft shadows don't widen the box
+    const minC = Math.max(2, H * 0.003), minR = Math.max(2, W * 0.003);
+    let x0 = 0, x1 = W - 1, y0 = 0, y1 = H - 1;
+    while (x0 < W && cols[x0] < minC) x0++; while (x1 > 0 && cols[x1] < minC) x1--;
+    while (y0 < H && rows[y0] < minR) y0++; while (y1 > 0 && rows[y1] < minR) y1--;
+    if (x1 <= x0 || (x1 - x0) < 8 || (y1 - y0) < 8) return c;
     const pad = Math.round(Math.max(x1 - x0, y1 - y0) * 0.02);
     x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(W - 1, x1 + pad); y1 = Math.min(H - 1, y1 + pad);
     if (x0 === 0 && y0 === 0 && x1 === W - 1 && y1 === H - 1) return c;
