@@ -119,6 +119,7 @@ input[type=color] { width: 40px; height: 30px; border: 1px solid var(--line); bo
 .pad { display: grid; grid-template-columns: repeat(5, 44px); gap: 6px; justify-content: start }
 .pad button { padding: 8px 0; font-size: 15px }
 .pad #shiftReset { font-size: 12px; padding: 8px 2px }
+#trimRow { gap: 6px 14px }
 button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
 #calib summary { color: var(--brass); font-weight: 500; font-size: 13px; cursor: pointer }
 #calib[open] summary { margin-bottom: 8px }
@@ -205,6 +206,7 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
             <button type="button" id="fillCircle" title="Lets the circle crop the picture, like a round photo frame">Round crop</button>
           </div>
           <div class="row" id="trimRow">
+            <label class="toggle"><input type="checkbox" id="keyWhite"> Make the white background see-through</label>
             <label class="toggle"><input type="checkbox" id="trimOn"> Trim blank edges off the picture</label>
             <button type="button" id="logoReset" title="Original picture, trimmed, centred, 85% size">Reset logo</button>
           </div>
@@ -317,7 +319,7 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
 
   function save() {
     keep("discprinter", S);
-    keep("discprinter-logos", LIB.map(l => ({ id: l.id, name: l.name, kind: l.kind, data: l.data, mk: l.mk, fill: l.fill, bgOn: l.bgOn, bgCol: l.bgCol, dx: l.dx, dy: l.dy, trim: l.trim !== false })));
+    keep("discprinter-logos", LIB.map(l => ({ id: l.id, name: l.name, kind: l.kind, data: l.data, mk: l.mk, fill: l.fill, bgOn: l.bgOn, bgCol: l.bgCol, dx: l.dx, dy: l.dy, trim: l.trim !== false, keyWhite: l.keyWhite !== false })));
   }
 
   // ---------- logo maker ----------
@@ -410,12 +412,46 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
   function prepareUpload(l) {
     const rt = RT[l.id] || (RT[l.id] = {});
     const src = rt.orig; if (!src) return;
-    if (l.trim === false) { rt.img = src; return; }
     try {
       const c = document.createElement("canvas"); c.width = src.naturalWidth || src.width; c.height = src.naturalHeight || src.height;
       c.getContext("2d").drawImage(src, 0, 0);
-      rt.img = trimEdges(c);
+      let out = c;
+      if (l.keyWhite !== false) out = knockOutWhite(out);
+      if (l.trim !== false) out = trimEdges(out);
+      rt.img = out;
     } catch (e) { rt.img = src; }
+  }
+  // Make the white background see-through: only white that is connected to the picture's edge,
+  // so white inside the logo (a watch face, white lettering) is left alone. Soft edge for anti-aliasing.
+  function knockOutWhite(c) {
+    const W = c.width, H = c.height, g = c.getContext("2d"), id = g.getImageData(0, 0, W, H), d = id.data;
+    const isWhite = i => d[i + 3] > 0 && d[i] > 232 && d[i + 1] > 232 && d[i + 2] > 232;
+    const nearWhite = i => d[i + 3] > 0 && d[i] > 205 && d[i + 1] > 205 && d[i + 2] > 205;
+    // Is there any white on the border at all? If not, nothing to do.
+    let any = false;
+    for (let x = 0; x < W && !any; x++) { if (isWhite(x * 4) || isWhite(((H - 1) * W + x) * 4)) any = true; }
+    for (let y = 0; y < H && !any; y++) { if (isWhite((y * W) * 4) || isWhite((y * W + W - 1) * 4)) any = true; }
+    if (!any) return c;
+    const seen = new Uint8Array(W * H); const stack = [];
+    const push = (x, y) => { const k = y * W + x; if (!seen[k] && isWhite(k * 4)) { seen[k] = 1; stack.push(k); } };
+    for (let x = 0; x < W; x++) { push(x, 0); push(x, H - 1); }
+    for (let y = 0; y < H; y++) { push(0, y); push(W - 1, y); }
+    while (stack.length) {
+      const k = stack.pop(), x = k % W, y = (k - x) / W;
+      if (x > 0) push(x - 1, y); if (x < W - 1) push(x + 1, y); if (y > 0) push(x, y - 1); if (y < H - 1) push(x, y + 1);
+    }
+    let n = 0;
+    for (let k = 0; k < W * H; k++) {
+      if (seen[k]) { d[k * 4 + 3] = 0; n++; continue; }
+      // soften the fringe: near-white pixels next to a removed one fade out
+      const x = k % W, y = (k - x) / W;
+      if (nearWhite(k * 4) && ((x > 0 && seen[k - 1]) || (x < W - 1 && seen[k + 1]) || (y > 0 && seen[k - W]) || (y < H - 1 && seen[k + W]))) {
+        const lum = (d[k * 4] + d[k * 4 + 1] + d[k * 4 + 2]) / 3; d[k * 4 + 3] = Math.round(d[k * 4 + 3] * (1 - (lum - 205) / 50));
+      }
+    }
+    if (!n) return c;
+    const t = document.createElement("canvas"); t.width = W; t.height = H; t.getContext("2d").putImageData(id, 0, 0);
+    return t;
   }
   function loadUpload(l) {
     return new Promise(res => {
@@ -470,7 +506,7 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
     $("fill").value = l.fill; $("fillOut").textContent = l.fill + "%";
     $("shiftOut").textContent = (l.dx || l.dy) ? ((l.dx > 0 ? "right " : l.dx < 0 ? "left " : "") + (l.dx ? Math.abs(l.dx) + " mm " : "") + (l.dy > 0 ? "down " : l.dy < 0 ? "up " : "") + (l.dy ? Math.abs(l.dy) + " mm" : "")).trim() : "centred";
     $("bgOn").checked = l.bgOn; $("bgCol").value = l.bgCol;
-    $("trimRow").hidden = l.kind !== "upload"; $("trimOn").checked = l.trim !== false;
+    $("trimRow").hidden = l.kind !== "upload"; $("trimOn").checked = l.trim !== false; $("keyWhite").checked = l.keyWhite !== false;
   }
   function changed() { buildDisc(cur()); renderAll(); save(); }
 
@@ -571,7 +607,8 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
   }));
   $("shiftReset").addEventListener("click", () => { const l = cur(); l.dx = 0; l.dy = 0; fillEditor(); changed(); });
   $("trimOn").addEventListener("change", e => { const l = cur(); l.trim = e.target.checked; prepareUpload(l); fillEditor(); changed(); });
-  $("logoReset").addEventListener("click", () => { const l = cur(); l.trim = true; l.dx = 0; l.dy = 0; l.fill = 85; l.bgOn = false; prepareUpload(l); fillEditor(); changed(); });
+  $("keyWhite").addEventListener("change", e => { const l = cur(); l.keyWhite = e.target.checked; prepareUpload(l); fillEditor(); changed(); });
+  $("logoReset").addEventListener("click", () => { const l = cur(); l.trim = true; l.keyWhite = true; l.dx = 0; l.dy = 0; l.fill = 85; l.bgOn = false; prepareUpload(l); fillEditor(); changed(); });
   $("bgOn").addEventListener("change", e => { cur().bgOn = e.target.checked; changed(); });
   $("bgCol").addEventListener("input", e => { cur().bgCol = e.target.value; changed(); });
   function upStatus(msg, kind) { const el = $("upStatus"); el.textContent = msg; el.className = "status " + (kind || ""); }
@@ -597,7 +634,7 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
         c0.getContext("2d").drawImage(img, 0, 0, c0.width, c0.height);
         URL.revokeObjectURL(url);
         l.data = c0.toDataURL("image/png"); (RT[l.id] || (RT[l.id] = {})).orig = c0;
-        l.dx = 0; l.dy = 0; l.trim = true; l.fill = 85;
+        l.dx = 0; l.dy = 0; l.trim = true; l.keyWhite = true; l.fill = 85;
         prepareUpload(l);
         if (l.kind !== "upload") { l.kind = "upload"; l.fill = 85; }
         if (/^Logo \d+$/.test(l.name) || /^My logo$/.test(l.name) || /^Example/.test(l.name)) l.name = (f.name || "My logo").replace(/\.[^.]+$/, "").slice(0, 30);
