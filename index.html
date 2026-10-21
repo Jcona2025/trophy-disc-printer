@@ -200,6 +200,10 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
           <label><span>Logo size: <span class="mono" id="fillOut"></span> of the circle</span>
             <input type="range" id="fill" min="40" max="110" step="1">
           </label>
+          <div class="row">
+            <button type="button" id="fitWhole" title="Shrinks a square or wide picture so none of it is cut off by the circle">Fit whole picture</button>
+            <button type="button" id="fillCircle" title="Lets the circle crop the picture, like a round photo frame">Round crop</button>
+          </div>
           <div class="row" id="trimRow">
             <label class="toggle"><input type="checkbox" id="trimOn"> Trim blank edges off the picture</label>
             <button type="button" id="logoReset" title="Original picture, trimmed, centred, 85% size">Reset logo</button>
@@ -302,6 +306,8 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
     return { id: newId(), name, kind, data: "", mk: defMk(), fill: kind === "make" ? 100 : 85, bgOn: false, bgCol: "#ffffff", dx: 0, dy: 0, trim: true };
   }
   let LIB = (load("discprinter-logos") || []).filter(l => l && l.id);
+  const nonEmpty = LIB.filter(l => l.kind === "make" || l.data);
+  if (nonEmpty.length) LIB = nonEmpty;
   if (!LIB.length) LIB = [newLogo("upload", "My logo")];
   LIB.forEach(l => { l.mk = Object.assign(defMk(), l.mk || {}); l.dx = +l.dx || 0; l.dy = +l.dy || 0; });
   const RT = {}; // runtime: id -> { src, disc }
@@ -550,6 +556,15 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
     });
   });
   $("fill").addEventListener("input", e => { cur().fill = +e.target.value; $("fillOut").textContent = cur().fill + "%"; changed(); });
+  // Whole picture inside the circle: the picture's diagonal must fit the diameter.
+  $("fitWhole").addEventListener("click", () => {
+    const l = cur(), rt = RT[l.id] || {}, src = rt.img || rt.made;
+    const w = src ? (src.naturalWidth || src.width) : 1, h = src ? (src.naturalHeight || src.height) : 1;
+    const longSide = Math.max(w, h), diag = Math.hypot(w, h);
+    l.fill = Math.max(40, Math.floor(100 * longSide / diag) - 1);   // square -> 69%, 2:1 -> 88%
+    l.dx = 0; l.dy = 0; fillEditor(); changed();
+  });
+  $("fillCircle").addEventListener("click", () => { const l = cur(); l.fill = 100; l.dx = 0; l.dy = 0; fillEditor(); changed(); });
   document.querySelectorAll(".pad button[data-dx]").forEach(b => b.addEventListener("click", () => {
     const l = cur(); l.dx = Math.max(-8, Math.min(8, +((l.dx || 0) + +b.dataset.dx).toFixed(2))); l.dy = Math.max(-8, Math.min(8, +((l.dy || 0) + +b.dataset.dy).toFixed(2)));
     fillEditor(); changed();
