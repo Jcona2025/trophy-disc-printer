@@ -416,10 +416,36 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
       const c = document.createElement("canvas"); c.width = src.naturalWidth || src.width; c.height = src.naturalHeight || src.height;
       c.getContext("2d").drawImage(src, 0, 0);
       let out = c;
-      if (l.keyWhite !== false) out = knockOutWhite(out);
+      if (l.keyWhite !== false) { out = shaveFrame(out); out = knockOutWhite(out); }
       if (l.trim !== false) out = trimEdges(out);
       rt.img = out;
     } catch (e) { rt.img = src; }
+  }
+  // Screenshots and product shots often carry a thin solid frame (black bars, a grey border line).
+  // Strip any uniform-colour band that runs along an edge, up to 6% of the picture, before keying.
+  function shaveFrame(c) {
+    const W = c.width, H = c.height, g = c.getContext("2d"), d = g.getImageData(0, 0, W, H).data;
+    const px = (x, y) => { const i = (y * W + x) * 4; return [d[i], d[i + 1], d[i + 2]]; };
+    const uniform = (getter, n) => {   // true if the n samples along a line are all within a small range of each other
+      let mn = [255, 255, 255], mx = [0, 0, 0];
+      for (let k = 0; k < n; k++) { const p = getter(k); for (let ch = 0; ch < 3; ch++) { if (p[ch] < mn[ch]) mn[ch] = p[ch]; if (p[ch] > mx[ch]) mx[ch] = p[ch]; } }
+      const white = mn[0] > 218 && mn[1] > 218 && mn[2] > 218;
+      return !white && (mx[0] - mn[0]) < 40 && (mx[1] - mn[1]) < 40 && (mx[2] - mn[2]) < 40;
+    };
+    const maxX = Math.floor(W * 0.06), maxY = Math.floor(H * 0.06);
+    let left = 0, right = 0, top = 0, bottom = 0;
+    while (left < maxX && uniform(k => px(left, k), H)) left++;
+    while (right < maxX && uniform(k => px(W - 1 - right, k), H)) right++;
+    while (top < maxY && uniform(k => px(k, top), W)) top++;
+    while (bottom < maxY && uniform(k => px(k, H - 1 - bottom), W)) bottom++;
+    if (!(left || right || top || bottom)) return c;
+    // one extra pixel to lose the anti-aliased edge of the frame
+    left = Math.min(maxX, left + (left ? 1 : 0)); right = Math.min(maxX, right + (right ? 1 : 0));
+    top = Math.min(maxY, top + (top ? 1 : 0)); bottom = Math.min(maxY, bottom + (bottom ? 1 : 0));
+    const t = document.createElement("canvas"); t.width = W - left - right; t.height = H - top - bottom;
+    if (t.width < 8 || t.height < 8) return c;
+    t.getContext("2d").drawImage(c, left, top, t.width, t.height, 0, 0, t.width, t.height);
+    return t;
   }
   // Make the white background see-through: only white that is connected to the picture's edge,
   // so white inside the logo (a watch face, white lettering) is left alone. Soft edge for anti-aliasing.
