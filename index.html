@@ -168,8 +168,8 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
             <button type="button" id="lgDel" style="align-self:end">Delete logo</button>
           </div>
           <div class="tabs" role="tablist">
-            <button type="button" role="tab" id="tabUp" aria-selected="true">Upload logo</button>
-            <button type="button" role="tab" id="tabMake" aria-selected="false">Create logo</button>
+            <button type="button" role="tab" id="tabUp" aria-selected="true">Use a picture</button>
+            <button type="button" role="tab" id="tabMake" aria-selected="false">Make a text disc</button>
           </div>
           <div id="paneUp" class="pane">
             <p class="hint" id="upNote">PNG or JPG. Blank edges are trimmed off automatically so the logo sits centred.</p>
@@ -623,7 +623,11 @@ button.inline { padding: 4px 10px; font-size: 13px; vertical-align: middle }
     S.assign = S.assign.map(a => a === id ? "" : a); S.active = LIB[0].id;
     fillEditor(); renderAll(); save(); status("Logo deleted.", "");
   });
-  $("tabUp").addEventListener("click", () => { const l = cur(); if (l.kind === "upload") return; l.kind = "upload"; l.fill = 85; fillEditor(); changed(); });
+  $("tabUp").addEventListener("click", () => {
+    const l = cur();
+    if (l.kind !== "upload") { l.kind = "upload"; l.fill = 85; fillEditor(); changed(); }
+    $("pickBtn").click();   // the tab doubles as the picker, so either button gets you a file dialog
+  });
   $("tabMake").addEventListener("click", () => { const l = cur(); if (l.kind === "make") return; l.kind = "make"; l.fill = 100; l.bgOn = false; fillEditor(); changed(); });
   [["mkTop", "top"], ["mkBot", "bot"], ["mkMid", "mid"], ["mkIcon", "icon"], ["mkBg", "bg"], ["mkFg", "fg"], ["mkAc", "ac"], ["mkRing", "ring"]].forEach(([id, k]) => {
     $(id).addEventListener(id === "mkIcon" || id === "mkRing" ? "change" : "input", e => {
